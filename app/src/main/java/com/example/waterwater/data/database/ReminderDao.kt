@@ -27,4 +27,7 @@ interface ReminderDao {
 
     @Query("DELETE FROM reminders WHERE id = :id")
     suspend fun deleteReminderById(id: Long)
+
+    @Query("SELECT * FROM reminders WHERE isEnabled = 1")
+    suspend fun getEnabledRemindersList(): List<Reminder>
 }

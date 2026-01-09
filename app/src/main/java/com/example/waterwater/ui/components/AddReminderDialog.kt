@@ -1,11 +1,10 @@
-// 文件位置: ui/components/AddReminderDialog.kt
-
 package com.example.waterwater.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.*
@@ -15,14 +14,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.waterwater.model.CatMood
 import com.example.waterwater.model.Reminder
 import com.example.waterwater.model.RepeatType
-import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +45,11 @@ fun AddReminderDialog(
     var selectedHour by remember { mutableIntStateOf(calendar.get(Calendar.HOUR_OF_DAY)) }
     var selectedMinute by remember { mutableIntStateOf(calendar.get(Calendar.MINUTE)) }
 
+    // 重复类型状态
     var selectedRepeatType by remember { mutableStateOf(existingReminder?.repeatType ?: RepeatType.NONE) }
+    // 重复间隔状态 (默认为 1)
+    var repeatIntervalStr by remember { mutableStateOf(existingReminder?.repeatInterval?.toString() ?: "1") }
+
     var selectedMood by remember { mutableStateOf(existingReminder?.catMood ?: CatMood.HAPPY) }
 
     var showTimePicker by remember { mutableStateOf(false) }
@@ -89,12 +94,9 @@ fun AddReminderDialog(
                         titleError = false
                     },
                     label = { Text("提醒事项") },
-                    placeholder = { Text("例如：喝水、吃药、休息...") },
+                    placeholder = { Text("例如：喝水、吃药...") },
                     singleLine = true,
                     isError = titleError,
-                    supportingText = if (titleError) {
-                        { Text("请输入提醒内容喵~", color = MaterialTheme.colorScheme.error) }
-                    } else null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -105,7 +107,6 @@ fun AddReminderDialog(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("描述（可选）") },
-                    placeholder = { Text("添加一些备注...") },
                     singleLine = false,
                     maxLines = 2,
                     modifier = Modifier.fillMaxWidth(),
@@ -114,6 +115,7 @@ fun AddReminderDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // === 时间选择 ===
                 Text(
                     text = "提醒时间",
                     fontSize = 14.sp,
@@ -144,7 +146,7 @@ fun AddReminderDialog(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = String.format("%02d:%02d", selectedHour, selectedMinute),
+                                text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -159,6 +161,7 @@ fun AddReminderDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // === 重复设置 ===
                 Text(
                     text = "重复类型",
                     fontSize = 14.sp,
@@ -172,8 +175,28 @@ fun AddReminderDialog(
                     onTypeSelected = { selectedRepeatType = it }
                 )
 
+                // 如果是分钟或小时，显示输入框
+                if (selectedRepeatType == RepeatType.HOURLY || selectedRepeatType == RepeatType.MINUTELY) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = repeatIntervalStr,
+                        onValueChange = { input ->
+                            if (input.all { it.isDigit() }) {
+                                repeatIntervalStr = input
+                            }
+                        },
+                        label = { Text(if (selectedRepeatType == RepeatType.HOURLY) "每几小时？" else "每几分钟？") },
+                        suffix = { Text(if (selectedRepeatType == RepeatType.HOURLY) "小时" else "分钟") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // === 猫咪心情 ===
                 Text(
                     text = "猫咪表情",
                     fontSize = 14.sp,
@@ -208,7 +231,10 @@ fun AddReminderDialog(
                                 return@Button
                             }
 
-                            // 计算时间戳
+                            // 解析间隔，防止空或0
+                            val interval = repeatIntervalStr.toIntOrNull() ?: 1
+                            val finalInterval = if (interval < 1) 1 else interval
+
                             val reminderTimeMillis = calculateReminderTime(selectedHour, selectedMinute)
 
                             val reminder = Reminder(
@@ -217,6 +243,7 @@ fun AddReminderDialog(
                                 description = description.trim(),
                                 timeInMillis = reminderTimeMillis,
                                 repeatType = selectedRepeatType,
+                                repeatInterval = finalInterval, // 保存间隔
                                 catMood = selectedMood,
                                 isEnabled = existingReminder?.isEnabled ?: true,
                                 createdAt = existingReminder?.createdAt ?: System.currentTimeMillis()
@@ -249,19 +276,21 @@ fun AddReminderDialog(
 
 /**
  * 计算提醒时间戳
- * 如果设定时间已过，自动顺延到明天
+ * 允许1分钟的“过去”误差，超过1分钟才算明天
  */
 private fun calculateReminderTime(hour: Int, minute: Int): Long {
+    val now = System.currentTimeMillis()
     val calendar = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, hour)
         set(Calendar.MINUTE, minute)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
+    }
 
-        // 如果时间已过，设为明天
-        if (timeInMillis <= System.currentTimeMillis()) {
-            add(Calendar.DAY_OF_YEAR, 1)
-        }
+    // 如果设定的时间比现在早超过 1 分钟，才认为是明天
+    // (例如现在 10:00，设 10:00:30，不算明天；设 09:00，算明天)
+    if (calendar.timeInMillis <= now - 60 * 1000) {
+        calendar.add(Calendar.DAY_OF_YEAR, 1)
     }
     return calendar.timeInMillis
 }
@@ -272,16 +301,21 @@ private fun RepeatTypeSelector(
     selectedType: RepeatType,
     onTypeSelected: (RepeatType) -> Unit
 ) {
+    val scrollState = rememberScrollState()
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(scrollState), // 修正：在这里添加滚动修饰符
+        horizontalArrangement = Arrangement.spacedBy(8.dp) // 增加一点间距
     ) {
         RepeatType.entries.forEach { type ->
             FilterChip(
                 selected = type == selectedType,
                 onClick = { onTypeSelected(type) },
                 label = { Text(type.toDisplayString(), fontSize = 11.sp) },
-                modifier = Modifier.weight(1f)
+                // 不需要在这里加 padding 了，由 Row 的 spacedBy 控制
+                modifier = Modifier.padding(vertical = 4.dp)
             )
         }
     }
@@ -344,6 +378,8 @@ private fun TimePickerDialog(
 
 fun RepeatType.toDisplayString(): String = when (this) {
     RepeatType.NONE -> "不重复"
+    RepeatType.MINUTELY -> "分钟"
+    RepeatType.HOURLY -> "小时"
     RepeatType.DAILY -> "每天"
     RepeatType.WEEKLY -> "每周"
     RepeatType.MONTHLY -> "每月"

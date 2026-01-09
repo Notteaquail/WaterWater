@@ -3,26 +3,27 @@ package com.example.waterwater.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.waterwater.alarm.AlarmScheduler
 import com.example.waterwater.data.repository.ReminderRepository
-import com.example.waterwater.model.CatMood
 import com.example.waterwater.model.Reminder
-import com.example.waterwater.model.RepeatType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class   ReminderViewModel(private val repository: ReminderRepository) : ViewModel() {
+// 构造函数增加 scheduler 参数
+class ReminderViewModel(
+    private val repository: ReminderRepository,
+    private val scheduler: AlarmScheduler
+) : ViewModel() {
 
-    // 所有提醒列表
+    // ... (保持原有的 _reminders, _currentReminder 等代码不变) ...
     private val _reminders = MutableStateFlow<List<Reminder>>(emptyList())
     val reminders: StateFlow<List<Reminder>> = _reminders.asStateFlow()
 
-    // 当前编辑的提醒
     private val _currentReminder = MutableStateFlow<Reminder?>(null)
     val currentReminder: StateFlow<Reminder?> = _currentReminder.asStateFlow()
 
-    // 是否显示添加/编辑对话框
     private val _showDialog = MutableStateFlow(false)
     val showDialog: StateFlow<Boolean> = _showDialog.asStateFlow()
 
@@ -38,12 +39,7 @@ class   ReminderViewModel(private val repository: ReminderRepository) : ViewMode
         }
     }
 
-    fun addReminder(reminder: Reminder) {
-        viewModelScope.launch {
-            repository.insertReminder(reminder)
-        }
-    }
-
+    // ... (showAddDialog, showEditDialog, dismissDialog 保持不变) ...
     fun showAddDialog() {
         _currentReminder.value = null
         _showDialog.value = true
@@ -59,36 +55,60 @@ class   ReminderViewModel(private val repository: ReminderRepository) : ViewMode
         _currentReminder.value = null
     }
 
+    // === 修改后的核心逻辑 ===
+
     fun saveReminder(reminder: Reminder) {
         viewModelScope.launch {
             if (_currentReminder.value != null) {
                 repository.updateReminder(reminder)
             } else {
-                repository.insertReminder(reminder)
+                val newId = repository.insertReminder(reminder)
+                // 插入新数据后，如果需要把生成的ID回写给AlarmScheduler，
+                // 最好是使用 copy 拿到带 ID 的对象，或者让 insert 返回 ID 后再 schedule
+                val savedReminder = reminder.copy(id = newId)
+                scheduler.schedule(savedReminder)
+                dismissDialog()
+                return@launch
             }
+
+            // 更新情况
+            scheduler.schedule(reminder)
             dismissDialog()
         }
     }
 
     fun toggleReminder(reminder: Reminder) {
+        val newStatus = !reminder.isEnabled
+        val updatedReminder = reminder.copy(isEnabled = newStatus)
+
         viewModelScope.launch {
-            repository.toggleReminderEnabled(reminder)
+            repository.toggleReminderEnabled(reminder) // DB update
+
+            if (newStatus) {
+                scheduler.schedule(updatedReminder)
+            } else {
+                scheduler.cancel(updatedReminder)
+            }
         }
     }
 
     fun deleteReminder(reminder: Reminder) {
         viewModelScope.launch {
             repository.deleteReminder(reminder)
+            scheduler.cancel(reminder)
         }
     }
 }
 
-// ViewModel 工厂
-class ReminderViewModelFactory(private val repository: ReminderRepository) : ViewModelProvider.Factory {
+// 修改工厂类
+class ReminderViewModelFactory(
+    private val repository: ReminderRepository,
+    private val scheduler: AlarmScheduler
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ReminderViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ReminderViewModel(repository) as T
+            return ReminderViewModel(repository, scheduler) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

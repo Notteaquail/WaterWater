@@ -8,7 +8,7 @@ import com.example.waterwater.model.Reminder
 
 @Database(
     entities = [Reminder::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class ReminderDatabase : RoomDatabase() {
@@ -25,7 +25,9 @@ abstract class ReminderDatabase : RoomDatabase() {
                     context.applicationContext,
                     ReminderDatabase::class.java,
                     "cat_reminder_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration() // 2. 添加这一行：版本升级时清空旧数据
+                .build()
                 INSTANCE = instance
                 instance
             }

@@ -29,4 +29,8 @@ class ReminderRepository(private val reminderDao: ReminderDao) {
     suspend fun toggleReminderEnabled(reminder: Reminder) {
         reminderDao.updateReminder(reminder.copy(isEnabled = !reminder.isEnabled))
     }
+
+    suspend fun getEnabledRemindersList(): List<Reminder> {
+        return reminderDao.getEnabledRemindersList()
+    }
 }

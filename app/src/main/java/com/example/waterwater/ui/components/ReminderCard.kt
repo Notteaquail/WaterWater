@@ -44,7 +44,7 @@ fun ReminderCard(
     )
 
     val catEmoji = when (reminder.catMood) {
-        CatMood.HAPPY -> "😺"
+        CatMood.HAPPY -> "😸"
         CatMood.SLEEPY -> "😴"
         CatMood.HUNGRY -> "😿"
         CatMood.PLAYFUL -> "😸"
@@ -101,7 +101,7 @@ fun ReminderCard(
                     if (reminder.repeatType != RepeatType.NONE) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "🔁 ${getRepeatText(reminder.repeatType)}",
+                            text = "🔁 ${getRepeatText(reminder)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -152,10 +152,16 @@ private fun formatTime(timeInMillis: Long): String {
     return sdf.format(Date(timeInMillis))
 }
 
-private fun getRepeatText(repeatType: RepeatType): String {
-    return when (repeatType) {
+/**
+ * 获取重复类型的显示文本
+ * 支持显示 "每 N 分钟" / "每 N 小时"
+ */
+private fun getRepeatText(reminder: Reminder): String {
+    return when (reminder.repeatType) {
         RepeatType.NONE -> ""
-        RepeatType.DAILY -> "每天"
+        RepeatType.MINUTELY -> "每 ${reminder.repeatInterval} 分钟"
+        RepeatType.HOURLY -> "每 ${reminder.repeatInterval} 小时"
+        RepeatType.DAILY -> if (reminder.repeatInterval > 1) "每 ${reminder.repeatInterval} 天" else "每天"
         RepeatType.WEEKLY -> "每周"
         RepeatType.MONTHLY -> "每月"
     }
