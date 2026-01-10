@@ -7,28 +7,45 @@ import androidx.room.PrimaryKey
 data class Reminder(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val title: String,                    // 提醒标题
-    val description: String = "",         // 描述
-    val timeInMillis: Long,               // 提醒时间戳
-    val repeatType: RepeatType = RepeatType.NONE,  // 重复类型
-    val repeatInterval: Int = 1, // 新增：重复间隔 (例如：每 2 小时的 "2")
-    val isEnabled: Boolean = true,        // 是否启用
-    val catMood: CatMood = CatMood.HAPPY, // 猫咪心情
+    val title: String,
+    val description: String = "",
+    val timeInMillis: Long,
+    val repeatType: RepeatType = RepeatType.NONE,
+    val repeatInterval: Int = 1,
+    val isEnabled: Boolean = true,
+    val catMood: CatMood = CatMood.HAPPY,
     val createdAt: Long = System.currentTimeMillis()
 )
 
 enum class RepeatType {
-    NONE,       // 不重复
-    MINUTELY,   // 新增：每x分钟
-    HOURLY,     // 新增：每x小时
-    DAILY,      // 每天
-    WEEKLY,     // 每周
-    MONTHLY     // 每月
+    NONE, MINUTELY, HOURLY, DAILY, WEEKLY, MONTHLY
 }
 
 enum class CatMood {
-    HAPPY,      // 开心
-    SLEEPY,     // 困困
-    HUNGRY,     // 饿了
-    PLAYFUL     // 想玩
+    HAPPY, SLEEPY, HUNGRY, PLAYFUL
+}
+
+// === 扩展函数转移到此处，方便全应用复用 ===
+
+fun CatMood.toEmoji(): String = when (this) {
+    CatMood.HAPPY -> "😸"
+    CatMood.SLEEPY -> "😴"
+    CatMood.HUNGRY -> "🍖"
+    CatMood.PLAYFUL -> "😺"
+}
+
+fun CatMood.toDisplayString(): String = when (this) {
+    CatMood.HAPPY -> "开心"
+    CatMood.SLEEPY -> "困困"
+    CatMood.HUNGRY -> "饿了"
+    CatMood.PLAYFUL -> "想玩"
+}
+
+fun RepeatType.toDisplayString(): String = when (this) {
+    RepeatType.NONE -> "不重复"
+    RepeatType.MINUTELY -> "分钟"
+    RepeatType.HOURLY -> "小时"
+    RepeatType.DAILY -> "每天"
+    RepeatType.WEEKLY -> "每周"
+    RepeatType.MONTHLY -> "每月"
 }

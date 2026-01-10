@@ -1,7 +1,7 @@
 package com.example.waterwater.ui.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,10 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.example.waterwater.model.CatMood
 import com.example.waterwater.model.Reminder
 import com.example.waterwater.model.RepeatType
-import com.example.waterwater.ui.theme.*
+import com.example.waterwater.model.toEmoji
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,31 +33,19 @@ fun ReminderCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val moodColor by animateColorAsState(
-        targetValue = when (reminder.catMood) {
-            CatMood.HAPPY -> MoodHappy
-            CatMood.SLEEPY -> MoodSleepy
-            CatMood.HUNGRY -> MoodHungry
-            CatMood.PLAYFUL -> MoodPlayful
-        },
-        label = "moodColor"
-    )
-
-    val catEmoji = when (reminder.catMood) {
-        CatMood.HAPPY -> "😸"
-        CatMood.SLEEPY -> "😴"
-        CatMood.HUNGRY -> "😿"
-        CatMood.PLAYFUL -> "😸"
-    }
+    // 吉卜力调色盘：更偏淡暖黄色的羊皮纸感
+    val ghibliPaperColor = Color(0xFFFFFDE7).copy(alpha = 0.85f) 
+    val ghibliStrokeColor = Color(0xFFD7CCC8).copy(alpha = 0.6f)
+    val ghibliAccent = Color(0xFF4E342E) // 深褐色
+    val ghibliGreen = Color(0xFF689F38) // 森林绿（用于开关）
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+            .clickable { onClick() }
+            .border(1.5.dp, ghibliStrokeColor, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = ghibliPaperColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -66,80 +54,66 @@ fun ReminderCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 猫咪表情
+            // 圆形图标区域，带有一点水彩感
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(moodColor.copy(alpha = 0.3f)),
+                    .background(Color.White.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = catEmoji, fontSize = 24.sp)
+                Text(text = reminder.catMood.toEmoji(), fontSize = 28.sp)
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-            // 提醒内容
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = reminder.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
+                    color = ghibliAccent,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = formatTime(reminder.timeInMillis),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        text = "⏰ ${formatTime(reminder.timeInMillis)}",
+                        fontSize = 12.sp,
+                        color = ghibliAccent.copy(alpha = 0.6f)
                     )
 
                     if (reminder.repeatType != RepeatType.NONE) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "🔁 ${getRepeatText(reminder)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            text = "🍃 ${getRepeatText(reminder)}",
+                            fontSize = 11.sp,
+                            color = ghibliGreen,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
-
-                if (reminder.description.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = reminder.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
 
-            // 开关和删除
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Switch(
                     checked = reminder.isEnabled,
                     onCheckedChange = { onToggle() },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = ghibliGreen,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = Color.LightGray.copy(alpha = 0.5f)
                     )
                 )
 
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(32.dp)
-                ) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        Icons.Default.Delete,
                         contentDescription = "删除",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                        modifier = Modifier.size(20.dp)
+                        tint = Color(0xFFBC8F8F), // 莫兰迪粉，柔和的删除色
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -148,20 +122,16 @@ fun ReminderCard(
 }
 
 private fun formatTime(timeInMillis: Long): String {
-    val sdf = SimpleDateFormat("MM月dd日 HH:mm", Locale.CHINA)
+    val sdf = SimpleDateFormat("HH:mm", Locale.CHINA)
     return sdf.format(Date(timeInMillis))
 }
 
-/**
- * 获取重复类型的显示文本
- * 支持显示 "每 N 分钟" / "每 N 小时"
- */
 private fun getRepeatText(reminder: Reminder): String {
     return when (reminder.repeatType) {
         RepeatType.NONE -> ""
-        RepeatType.MINUTELY -> "每 ${reminder.repeatInterval} 分钟"
-        RepeatType.HOURLY -> "每 ${reminder.repeatInterval} 小时"
-        RepeatType.DAILY -> if (reminder.repeatInterval > 1) "每 ${reminder.repeatInterval} 天" else "每天"
+        RepeatType.MINUTELY -> "每 ${reminder.repeatInterval} 分"
+        RepeatType.HOURLY -> "每 ${reminder.repeatInterval} 时"
+        RepeatType.DAILY -> "每天"
         RepeatType.WEEKLY -> "每周"
         RepeatType.MONTHLY -> "每月"
     }
