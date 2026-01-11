@@ -1,7 +1,9 @@
 package com.example.waterwater.viewmodel
 
+import android.app.Application
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.geometry.Offset
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -10,15 +12,20 @@ import com.example.waterwater.data.repository.ReminderRepository
 import com.example.waterwater.model.CatBreed
 import com.example.waterwater.model.CatInstance
 import com.example.waterwater.model.Reminder
+import com.example.waterwater.utils.CatPositionManager
+import com.example.waterwater.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ReminderViewModel(
+    application: Application,
     private val repository: ReminderRepository,
     private val scheduler: AlarmScheduler
-) : ViewModel() {
+) : AndroidViewModel(application) {
+
+    private val positionManager = CatPositionManager(application)
 
     private val _reminders = MutableStateFlow<List<Reminder>>(emptyList())
     val reminders: StateFlow<List<Reminder>> = _reminders.asStateFlow()
@@ -33,19 +40,53 @@ class ReminderViewModel(
 
     init {
         loadReminders()
+        initializeCats()
+    }
+
+    private fun initializeCats() {
         if (cats.isEmpty()) {
-            cats.addAll(listOf(
-                CatInstance(breed = CatBreed.BLACK_WHITE_LONG, offset = Offset(932f, 1149f), scale = 1.0f, isThinkingEnabled = false),
-                CatInstance(breed = CatBreed.GOLDEN_LONG, offset = Offset(-23f, 911f), scale = 1.2f, isThinkingEnabled = true),
-                CatInstance(breed = CatBreed.CREAM_BRITISH, offset = Offset(122.7f, 1973.5f), scale = 1.0f, isThinkingEnabled = true),
-                CatInstance(breed = CatBreed.MUNCHKIN_SHORT, offset = Offset(702f, 1657f), scale = 3f, isThinkingEnabled = false),
-                CatInstance(breed = CatBreed.ONE_EYE_GOLDEN, offset = Offset(504f, 1392f), scale = 0.5f, isThinkingEnabled = true)
-            ))
+            val breeds = listOf(
+                CatBreed.BLACK_WHITE_LONG to Offset(932f, 1149f),
+                CatBreed.GOLDEN_LONG to Offset(-23f, 911f),
+                CatBreed.CREAM_BRITISH to Offset(122.7f, 1973.5f),
+                CatBreed.MUNCHKIN_SHORT to Offset(702f, 1657f),
+                CatBreed.ONE_EYE_GOLDEN to Offset(504f, 1392f)
+            )
+
+            breeds.forEachIndexed { index, pair ->
+                val breed = pair.first
+                val defaultPos = pair.second
+                val catId = "cat_$index"
+                
+                // 恢复缩放比例
+                val catScale = when(breed) {
+                    CatBreed.MUNCHKIN_SHORT -> 3f
+                    CatBreed.ONE_EYE_GOLDEN -> 0.5f
+                    CatBreed.GOLDEN_LONG -> 1.2f
+                    else -> 1.0f
+                }
+                
+                // === 核心修正：恢复你之前的气泡开关设置 ===
+                val isThinking = when(breed) {
+                    CatBreed.BLACK_WHITE_LONG -> false // 黑白长毛不冒泡
+                    CatBreed.MUNCHKIN_SHORT -> false   // 矮脚不冒泡
+                    else -> true                       // 其他正常冒泡
+                }
+
+                val savedPos = positionManager.getPosition(catId, defaultPos)
+                cats.add(CatInstance(
+                    id = catId, 
+                    breed = breed, 
+                    offset = savedPos, 
+                    scale = catScale, 
+                    isThinkingEnabled = isThinking
+                ))
+            }
         }
     }
 
-    fun addCat(breed: CatBreed) {
-        cats.add(CatInstance(breed = breed, offset = Offset(300f, 800f)))
+    fun saveCatPosition(cat: CatInstance) {
+        positionManager.savePosition(cat.id, cat.offset)
     }
 
     private fun loadReminders() {
@@ -60,22 +101,35 @@ class ReminderViewModel(
 
     fun saveReminder(reminder: Reminder) {
         viewModelScope.launch {
-            if (_currentReminder.value != null) {
-                repository.updateReminder(reminder)
+            val validatedTime = TimeUtils.getInitialValidTime(reminder)
+            val validatedReminder = reminder.copy(timeInMillis = validatedTime)
+
+            val finalReminder = if (_currentReminder.value != null) {
+                repository.updateReminder(validatedReminder)
+                validatedReminder
             } else {
-                val newId = repository.insertReminder(reminder)
-                scheduler.schedule(reminder.copy(id = newId))
+                val newId = repository.insertReminder(validatedReminder)
+                validatedReminder.copy(id = newId)
             }
-            scheduler.schedule(reminder)
+            
+            scheduler.schedule(finalReminder)
             dismissDialog()
         }
     }
 
     fun toggleReminder(reminder: Reminder) {
         viewModelScope.launch {
-            repository.toggleReminderEnabled(reminder)
-            if (!reminder.isEnabled) scheduler.schedule(reminder.copy(isEnabled = true))
-            else scheduler.cancel(reminder)
+            val updatedEnabled = !reminder.isEnabled
+            val updatedReminder = reminder.copy(isEnabled = updatedEnabled)
+            repository.updateReminder(updatedReminder)
+
+            if (updatedEnabled) {
+                val nextValid = updatedReminder.copy(timeInMillis = TimeUtils.getInitialValidTime(updatedReminder))
+                repository.updateReminder(nextValid)
+                scheduler.schedule(nextValid)
+            } else {
+                scheduler.cancel(updatedReminder)
+            }
         }
     }
 
@@ -88,13 +142,14 @@ class ReminderViewModel(
 }
 
 class ReminderViewModelFactory(
+    private val application: Application,
     private val repository: ReminderRepository,
     private val scheduler: AlarmScheduler
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ReminderViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ReminderViewModel(repository, scheduler) as T
+            return ReminderViewModel(application, repository, scheduler) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

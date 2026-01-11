@@ -14,7 +14,10 @@ data class Reminder(
     val repeatInterval: Int = 1,
     val isEnabled: Boolean = true,
     val catMood: CatMood = CatMood.HAPPY,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    // 新增：每日重复的活跃时段 (默认全天 0-23)
+    val startHour: Int = 0,
+    val endHour: Int = 23
 )
 
 enum class RepeatType {
@@ -24,8 +27,6 @@ enum class RepeatType {
 enum class CatMood {
     HAPPY, SLEEPY, HUNGRY, PLAYFUL
 }
-
-// === 扩展函数转移到此处，方便全应用复用 ===
 
 fun CatMood.toEmoji(): String = when (this) {
     CatMood.HAPPY -> "😸"

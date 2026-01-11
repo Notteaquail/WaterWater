@@ -20,8 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,7 +52,6 @@ fun HomeScreen(
         }
     }
 
-    // === 视觉风格配置 ===
     val ghibliAccent = Color(0xFF5D4037)
     val ghibliWood = Color(0xFF8D6E63)
     val scrollBaseColor = Color(0xFFBCAA91)
@@ -62,13 +59,12 @@ fun HomeScreen(
 
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
-    val panelHeight = screenHeight * 0.7f
+    val panelHeight = screenHeight * 0.5f 
     val handleHeight = 100.dp
-    val topAxisHeight = 16.dp // 定义顶部挂轴高度
+    val topAxisHeight = 16.dp
 
     var isExpanded by remember { mutableStateOf(false) }
 
-    // === 核心修正：收起偏移量必须包含顶部挂轴的高度 ===
     val panelOffset by animateDpAsState(
         targetValue = if (isExpanded) 0.dp else -(panelHeight + topAxisHeight),
         animationSpec = tween(durationMillis = 600),
@@ -76,22 +72,26 @@ fun HomeScreen(
     )
 
     Box(modifier = modifier.fillMaxSize()) {
-        // 1. 最底层：场景
         MainScene(scrollOffsetProvider = { getScrollOffset.value })
 
-        // 2. 中间层：猫咪
         viewModel.cats.forEach { cat ->
-            DraggableCatOverlay(cat = cat, scrollOffsetProvider = { getScrollOffset.value })
+            DraggableCatOverlay(
+                cat = cat, 
+                scrollOffsetProvider = { getScrollOffset.value },
+                onDragEnd = { viewModel.saveCatPosition(cat) } // 拖拽结束时保存
+            )
         }
 
-        // 3. 任务卷轴
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .offset { IntOffset(0, panelOffset.toPx().roundToInt()) }
                 .padding(horizontal = 12.dp)
-                .shadow(8.dp, RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp))
-                .clip(RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp))
+                .graphicsLayer {
+                    shadowElevation = 8.dp.toPx()
+                    shape = RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp)
+                    clip = true
+                }
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
@@ -103,7 +103,6 @@ fun HomeScreen(
                 )
                 .border(1.dp, scrollBorder, RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp))
         ) {
-            // A. 顶部挂轴
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -115,7 +114,6 @@ fun HomeScreen(
                     )
             )
 
-            // B. 卷轴主体内容
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -159,7 +157,6 @@ fun HomeScreen(
                 }
             }
 
-            // C. 底部拉手
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -210,7 +207,8 @@ fun HomeScreen(
 @Composable
 fun DraggableCatOverlay(
     cat: CatInstance,
-    scrollOffsetProvider: () -> Float
+    scrollOffsetProvider: () -> Float,
+    onDragEnd: () -> Unit // 新增回调
 ) {
     var offsetX by remember { mutableFloatStateOf(cat.offset.x) }
     var offsetY by remember { mutableFloatStateOf(cat.offset.y) }
@@ -224,12 +222,15 @@ fun DraggableCatOverlay(
                 scaleY = cat.scale
             }
             .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    offsetX += dragAmount.x
-                    offsetY += dragAmount.y
-                    cat.offset = androidx.compose.ui.geometry.Offset(offsetX, offsetY)
-                }
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount.x
+                        offsetY += dragAmount.y
+                        cat.offset = androidx.compose.ui.geometry.Offset(offsetX, offsetY)
+                    },
+                    onDragEnd = { onDragEnd() } // 结束时保存
+                )
             }
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

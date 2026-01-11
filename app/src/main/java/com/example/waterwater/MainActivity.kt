@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             WaterWaterTheme {
                 val viewModel: ReminderViewModel = viewModel(
-                    factory = ReminderViewModelFactory(app.repository, app.alarmScheduler)
+                    factory = ReminderViewModelFactory(app, app.repository, app.alarmScheduler)
                 )
                 HomeScreen(viewModel = viewModel)
             }
