@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import cn.leancloud.LeanCloud
 import com.example.waterwater.alarm.AlarmScheduler
 import com.example.waterwater.data.database.ReminderDatabase
 import com.example.waterwater.data.repository.ReminderRepository
@@ -13,8 +14,6 @@ class WaterWaterApp : Application() {
 
     val database by lazy { ReminderDatabase.getDatabase(this) }
     val repository by lazy { ReminderRepository(database.reminderDao()) }
-
-    // 新增 Scheduler 实例
     val alarmScheduler by lazy { AlarmScheduler(this) }
 
     companion object {
@@ -23,6 +22,16 @@ class WaterWaterApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // === 初始化 LeanCloud ===
+        // 请在此处填入你在 LeanCloud 控制台获取的凭证
+        LeanCloud.initialize(
+            this,
+            "htmh3FMIyawOXwMvmkCUy89j-gzGzoHsz",
+            "jYePTQUn0P5vw4oZ9CQmsyyP",
+            "https://htmh3fmi.lc-cn-n1-shared.com" // 通常以 https:// 开头
+        )
+        
         createNotificationChannel()
     }
 

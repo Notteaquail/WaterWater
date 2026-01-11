@@ -2,14 +2,12 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)  // 新增：Room 需要
+    alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.example.waterwater"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.waterwater"
@@ -59,22 +57,16 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+    // === 核心修改：仅保留稳定可用的存储库，删除实时通讯库 ===
+    implementation(libs.leancloud.storage)
 
-    // Room 数据库
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // ViewModel for Compose
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.livedata.ktx)
-
-    // Lottie 动画 (Compose 版本)
     implementation(libs.lottie.compose)
-
-    // 协程
     implementation(libs.kotlinx.coroutines.android)
-
-    // 其他依赖...
     implementation(libs.androidx.compose.material.icons.extended)
 }

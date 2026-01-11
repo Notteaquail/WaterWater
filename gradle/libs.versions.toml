@@ -9,12 +9,14 @@ lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
 composeBom = "2024.09.00"
 
-# ===== 新增版本 =====
 materialIconsExtended = "1.7.8"
 room = "2.6.1"
 lottie = "6.3.0"
 coroutines = "1.7.3"
 ksp = "2.0.21-1.0.27"
+
+# LeanCloud
+leancloud = "8.2.19"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended"}
@@ -33,7 +35,6 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 
-# ===== 新增库 =====
 # Room
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
@@ -43,18 +44,18 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycleRuntimeKtx" }
 
-# Lottie (Compose 版本)
+# Lottie
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
 
 # Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
+# LeanCloud
+leancloud-storage = { group = "cn.leancloud", name = "storage-android", version.ref = "leancloud" }
+leancloud-realtime = { group = "cn.leancloud", name = "realtime-android", version.ref = "leancloud" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-# ===== 新增插件 =====
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-
-

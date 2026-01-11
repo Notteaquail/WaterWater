@@ -16,9 +16,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // 新增：LeanCloud 专用 Maven 仓库
+        maven { setUrl("https://maven.aliyun.com/repository/public") }
     }
 }
 
 rootProject.name = "WaterWater"
 include(":app")
- 

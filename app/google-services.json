@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "625249133008",
+    "project_id": "waterwater-61d0d",
+    "storage_bucket": "waterwater-61d0d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:625249133008:android:26f1e817084d3b89c319d5",
+        "android_client_info": {
+          "package_name": "com.example.waterwater"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_DOwHfC_lhW35PLiLq3biGqDFMjqbMpI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

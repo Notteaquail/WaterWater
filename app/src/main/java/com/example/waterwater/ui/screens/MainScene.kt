@@ -10,7 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -23,16 +22,16 @@ import androidx.compose.ui.unit.sp
 import com.airbnb.lottie.compose.*
 import com.example.waterwater.R
 import com.example.waterwater.model.CatBreed
-import com.example.waterwater.model.toEmoji
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 /**
- * 纯净的背景场景：仅包含吉卜力背景图和阳光呼吸效果
+ * 纯净的背景层：仅包含背景图和阳光
  */
 @Composable
 fun MainScene(
     scrollOffsetProvider: () -> Float,
+    onDeskClick: () -> Unit = {}, // 保持接口兼容
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "SunlightEffect")
@@ -43,8 +42,7 @@ fun MainScene(
     )
 
     Box(modifier = modifier.fillMaxSize().background(Color(0xFFD7CCC8))) {
-        // 1. 背景层 (视差系数 0.3)
-        // 取消了之前的 scale 缩放，使其保持原图比例
+        // 1. 背景层
         Image(
             painter = painterResource(id = R.drawable.bg_living_room),
             contentDescription = null,
@@ -54,21 +52,21 @@ fun MainScene(
             contentScale = ContentScale.Crop
         )
 
-        // 2. 阳光层 (视差系数 0.3，与背景同步)
+        // 2. 阳光层
         Box(modifier = Modifier.fillMaxSize().graphicsLayer {
             translationY = -scrollOffsetProvider() * 0.3f
             alpha = sunAlpha
         }.background(
             Brush.linearGradient(
                 colors = listOf(Color(0xFFFFE0B2), Color.Transparent),
-                start = Offset(1200f, 0f), end = Offset(0f, 1500f)
+                start = Offset(1200f, 0f), end = Offset(1500f, 1500f)
             )
         ))
     }
 }
 
 /**
- * 动态猫咪组件定义 (仅作为定义，供 HomeScreen 顶层调用)
+ * 动态猫咪组件：仅供外层按需调用
  */
 @Composable
 fun DynamicCat(
@@ -78,7 +76,7 @@ fun DynamicCat(
 ) {
     var isThinking by remember { mutableStateOf(false) }
     var thoughtEmoji by remember { mutableStateOf("🐱") }
-    val thoughtIcons = listOf("🐟", "🧶", "🖱️", "🥛", "☀️", "🦋", "📦", "🍗", "✨")
+    val thoughtIcons = listOf("🐟", "🧶", "鼠标", "🥛", "☀️", "🦋", "📦", "🍗", "✨")
 
     if (isThinkingEnabled) {
         LaunchedEffect(Unit) {
@@ -93,7 +91,6 @@ fun DynamicCat(
     }
 
     Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
-        // 加载动画
         val lottieRes = when(breed) {
             CatBreed.BLACK_WHITE_LONG -> R.raw.cat_sleepy
             CatBreed.GOLDEN_LONG -> R.raw.cat_idle
@@ -115,11 +112,10 @@ fun DynamicCat(
             if (composition != null) {
                 LottieAnimation(composition, progress = { progress }, modifier = Modifier.fillMaxSize())
             } else {
-                Text(text = "🐱", fontSize = 44.sp)
+                Text(text = breed.toBaseEmoji(), fontSize = 44.sp)
             }
         }
 
-        // 思考气泡
         if (isThinking && isThinkingEnabled) {
             Box(
                 modifier = Modifier
@@ -134,4 +130,11 @@ fun DynamicCat(
             }
         }
     }
+}
+
+private fun CatBreed.toBaseEmoji(): String = when(this) {
+    CatBreed.BLACK_WHITE_LONG -> "🐼"
+    CatBreed.GOLDEN_LONG -> "🦁"
+    CatBreed.ONE_EYE_GOLDEN -> "😉"
+    else -> "🐱"
 }
